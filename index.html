@@ -1,297 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CVE-2026-31431 "Copy Fail" — Linux Kernel LPE | noisyloop</title>
-  <meta name="description" content="A nine-year-old logic bug in the Linux kernel lets any local user become root. What it is, who's affected, and how to fix it on Ubuntu right now.">
-  <meta name="author" content="Noisy Loop">
-  <link rel="canonical" href="https://noisyloop.github.io/posts/cve-2026-31431.html">
-  <meta property="og:title" content='CVE-2026-31431 "Copy Fail" — Linux Kernel LPE'>
-  <meta property="og:description" content="A nine-year-old logic bug in the Linux kernel lets any local user become root. What it is, who's affected, and how to fix it.">
-  <meta property="og:url" content="https://noisyloop.github.io/posts/cve-2026-31431.html">
-  <meta property="og:type" content="article">
-  <link rel="stylesheet" href="../assets/css/style.css">
-  <style>
-    /* ── Code blocks ── */
-    .post-body pre {
-      background: #111;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 1rem 1.1rem;
-      overflow-x: auto;
-      margin: 1.2rem 0;
-      font-size: 0.82rem;
-      line-height: 1.6;
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-      color: #ccc;
-    }
-    .post-body pre code {
-      background: none;
-      padding: 0;
-      font-size: inherit;
-      color: inherit;
-      border-radius: 0;
-    }
-    /* ── Inline code override for visibility ── */
-    .post-body code {
-      color: var(--link);
-    }
-    /* ── Comment lines inside pre ── */
-    .post-body pre .cm  { color: #555; }
-    /* ── Callout box ── */
-    .callout {
-      border-left: 2px solid var(--link);
-      padding: 0.75rem 1rem;
-      background: #0a0a0a;
-      margin: 1.5rem 0;
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-    .callout strong { color: var(--text); font-weight: 600; }
-    .callout.warn  { border-color: #04b407; }
-    .callout.warn strong { color: #46ba02; }
-    /* ── Stat row ── */
-    .stat-row {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin: 1.5rem 0;
-    }
-    .stat {
-      background: #0d0d0d;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 0.75rem 1rem;
-      flex: 1;
-      min-width: 120px;
-    }
-    .stat-val { font-size: 1.4rem; font-weight: 700; color: var(--link); line-height: 1; }
-    .stat-lbl { font-size: 0.7rem; color: var(--muted); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
-    /* ── Timeline ── */
-    .timeline { margin: 1.2rem 0; display: flex; flex-direction: column; gap: 0; }
-    .tl {
-      display: flex;
-      gap: 1rem;
-      padding-bottom: 1.1rem;
-      font-size: 0.9rem;
-    }
-    .tl-date { color: var(--muted); min-width: 90px; padding-top: 0.05rem; font-size: 0.78rem; flex-shrink: 0; }
-    .tl-body { color: var(--text); }
-    .tl-body strong { color: var(--link); }
-    /* ── Table ── */
-    .post-body table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-      margin: 1.2rem 0;
-    }
-    .post-body th {
-      text-align: left;
-      padding: 0.5rem 0.75rem;
-      border-bottom: 1px solid var(--border);
-      color: var(--muted);
-      font-weight: 600;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .post-body td {
-      padding: 0.55rem 0.75rem;
-      border-bottom: 1px solid var(--border);
-      color: var(--muted);
-    }
-    .post-body td:first-child { color: var(--text); }
-    .ok  { color: #22c55e !important; }
-    .bad { color: #13c333 !important; }
-    .mid { color: #08d80b !important; }
-    @media (max-width: 600px) {
-      .stat-row { flex-direction: column; }
-      .tl-date { min-width: 70px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>noisyloop</title>
+<meta name="description" content="Noisy Loop - Attack surface is everyone's problem. I just map it.">
+<meta name="author" content="Noisy Loop">
+<link rel="canonical" href="https://noisyloop.github.io/">
+<meta property="og:title" content="noisyloop">
+<meta property="og:description" content="Noisy Loop - Attack surface is everyone's problem. I just map it.">
+<meta property="og:url" content="https://noisyloop.github.io/">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-
 <header>
   <div class="wrap">
-    <span class="site-name"><a href="../index.html" style="color:var(--link);text-decoration:none;">noisyloop</a></span>
+    <span class="site-name">noisyloop</span>
     <nav>
-      <a href="../about.html">About</a>
+      <a href="about.html">About</a>
     </nav>
   </div>
 </header>
-
 <main>
   <div class="wrap">
-
-    <div class="post-header">
-      <p class="post-meta">3 May 2026 &nbsp;·&nbsp; CVE / Linux</p>
-      <h1>CVE-2026-31431 "Copy Fail" Linux Kernel Local Privilege Escalation</h1>
-    </div>
-
-    <div class="post-body">
-
-      <p>
-        A nine-year-old logic bug in the Linux kernel was publicly disclosed on April 29, 2026.
-        It allows any unprivileged local user get root access. The attacker only needs a simple script, and they won't leave a single trace on disk.
-      </p>
-
-      <h2>What is a CVE?</h2>
-      <p>
-        CVE stands for <em>Common Vulnerabilities and Exposures</em>. It's a standardised ID system
-        that gives every publicly known security flaw a unique reference number so researchers,
-        vendors, and defenders are all on the same page when it comes to discussing them. The format is
-        <code>CVE-[year]-[number]</code>. The number doesn't imply severity. For that, there's
-        the CVSS score, which runs from 0 to 10. CVE-2026-31431 scores 7.8, which puts it in the
-        <strong>High</strong> tier.
-      </p>
-
-      <h2>What is Copy Fail?</h2>
-      <p>
-        Copy Fail is a <strong>local privilege escalation (LPE)</strong> vulnerability. That means it technically
-        doesn't let someone break in from the outside. It lets someone who already has a foothold
-        (a shell, a CI runner, a compromised service account) go from a regular user to full root.
-      </p>
-      <p>
-        The bug lives in <code>algif_aead</code>, a kernel module in the cryptographic subsystem.
-        Through a specific sequence of socket operations, an attacker can write 4 controlled bytes
-        into the page cache of ANY readable file on the system. This includes a setuid root binary.
-        When that binary runs, the attacker gets root. It's really that simple.
-      </p>
-      <p>
-        The modification exists only in memory. Nothing ever touches disk. File integrity tools, antivirus,
-        and standard forensics can't see anything. Reboot the machine and the evidence is completely gone.
-      </p>
-
-      <h2>Impact right now</h2>
-      <p>
-        As of today, a fully functional public exploit for the Linux kernel is still circulating and active exploitation has been confirmed
-        by threat intelligence platforms and researchers. CISA added it to the Known Exploited Vulnerabilities catalog on April 30.
-        Microsoft Defender has flagged preliminary testing activity that is likely to increase in the coming days. Theori researcher Taeyang Lee found it using The AI tool: Xint Code. They were also a finalist in DARPA's AI Cyber Challenge. Coordinated disclosure seems to be taking place.
-      </p>
-      <p>
-        The blast radius is large. This isn't a niche vulnerability affecting one random distro.
-        It hits every major Linux distribution running any kernel built between 2017 and the patch release. That's essentially every production Linux machine on the planet for the past nine years that hasn't been patched in the last month (~millions). 
-        That's Ubuntu, Debian, RHEL, Amazon Linux, Fedora, Arch, SUSE, and more. It works in cloud VMs,
-        bare metal, and shared-kernel container environments like Kubernetes clusters
-        and CI/CD pipelines where untrusted code runs all the time.
-      </p>
-
-      <h2>Ubuntu: how to fix it</h2>
-      <p>
-        Canonical has shipped a mitigation via the <code>kmod</code> package that blacklists the
-        <code>algif_aead</code> module. The full kernel patch is rolling out separately.
-        The fastest path to protected:
-      </p>
-
-      <p><strong>Option 1: Full upgrade (recommended)</strong></p>
-      <pre><code>sudo apt update && sudo apt upgrade
-sudo reboot</code></pre>
-
-      <p><strong>Option 2: Target kmod only</strong></p>
-      <pre><code>sudo apt update && sudo apt install --only-upgrade kmod
-sudo reboot</code></pre>
-
-      <p>
-        The reboot ensures the patched kernel is loaded and any previously loaded module is fully unloaded.
-        If you have <code>unattended-upgrades</code> enabled, the kmod fix
-        will apply automatically within 24 hours.
-      </p>
-
-      <div class="callout warn">
-        <strong>Regression note:</strong> disabling <code>algif_aead</code> removes hardware-accelerated AEAD cryptography.
-        Most applications fall back to userspace crypto automatically, but some may not.
-      </div>
-
-      <h2>Can't reboot? No-reboot workaround</h2>
-      <p>
-        Apply the <code>kmod</code> update first (Option 2 above), then run the following to
-        unload the module from the live kernel without restarting:
-      </p>
-
-      <pre><code><span class="cm"># Unload the module if it's running</span>
-sudo rmmod algif_aead 2>/dev/null || true
-
-<span class="cm"># Confirm it's gone</span>
-lsmod | grep algif_aead
-<span class="cm"># No output means you're good</span>
-
-<span class="cm"># Confirm the blacklist is in place</span>
-cat /etc/modprobe.d/disable-algif.conf
-<span class="cm"># Should show: install algif_aead /bin/false</span></code></pre>
-
-      <p>
-        If <code>lsmod</code> returns nothing and the blacklist file exists, you are protected without a reboot.
-      </p>
-
-      <div class="callout">
-        <strong>Edge case:</strong> on some enterprise kernels <code>algif_aead</code> is compiled directly into
-        the kernel image (<code>CONFIG_CRYPTO_USER_API_AEAD=y</code>) rather than as a loadable module.
-        In that case <code>rmmod</code> won't work and the blacklist has no effect.
-        Check with: <code>grep CONFIG_CRYPTO_USER_API_AEAD /boot/config-$(uname -r)</code>
-        If it returns <code>=y</code>, you need the full kernel update. There is no shortcut.
-      </div>
-
-      <h2>Other distros &mdash; generic mitigation</h2>
-      <p>Works on any distro where the module is loadable (<code>=m</code>):</p>
-
-      <pre><code>echo "install algif_aead /bin/false" | sudo tee /etc/modprobe.d/disable-algif.conf
-sudo rmmod algif_aead 2&gt;/dev/null || true</code></pre>
-
-      <p>Then update your kernel via your distro's package manager when the patch is available.</p>
-
-      <h2>Verify that you are protected</h2>
-      <pre><code><span class="cm"># Module should not be loaded</span>
-lsmod | grep algif_aead
-
-<span class="cm"># Module should fail to load</span>
-sudo modprobe algif_aead
-<span class="cm"># Expected: ERROR: could not insert 'algif_aead'</span>
-
-<span class="cm"># Check if module is built-in (=y means you need a kernel patch)</span>
-grep CONFIG_CRYPTO_USER_API_AEAD /boot/config-$(uname -r)</code></pre>
-
-      <h2>Why forensics won't catch it after the fact</h2>
-      <p>
-        The exploit only modifies the kernel's page cache. The in-memory copy of files the kernel keeps
-        for performance. It never writes to disk. File integrity monitoring tools compare against disk state,
-        so they see nothing. A full disk image taken post-exploitation will show the original, unmodified files.
-        Reboot and all evidence vanishes.
-      </p>
-      <p>
-        One potential post-exploitation signal: <code>auth.log</code> may show <code>su</code> entries with
-        a missing invoking username. This can occur legitimately but is unusual enough to investigate:
-      </p>
-      <pre><code>grep "su\[.*\]: (to root)" /var/log/auth.log | grep -v "(to root) [a-zA-Z]"</code></pre>
-      <p>
-        Real-time detection is the only realistic option here. eBPF-based monitoring, Falco rules,
-        or anything watching kernel behaviour rather than disk state. I've created my own eBPF-based tools that can detect this exploit in action. Search for Glasswally on GitHub if you're interested in that and modify as you like.
-      </p>
-      <p>
-        Real-time detection is the only realistic option here. eBPF-based monitoring, Falco rules,
-        or anything watching kernel behaviour rather than disk state. I've created my own eBPF-based tools that can detect this exploit in action. Search for Glasswally on GitHub if you're interested in that and modify as you like.
-      </p>
-      <h2>Further reading</h2>
-      <p>
-        <a href="https://ubuntu.com/blog/copy-fail-vulnerability-fixes-available" target="_blank">Ubuntu Security Blog. "Copy Fail" advisory</a><br>
-        <a href="https://access.redhat.com/security/vulnerabilities/RHSB-2026-02" target="_blank">Red Hat Security Bulletin RHSB-2026-02</a><br>
-        <a href="https://www.tenable.com/blog/copy-fail-cve-2026-31431-frequently-asked-questions-about-linux-kernel-privilege-escalation" target="_blank">Copy Fail FAQ</a><br>
-        <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-31431" target="_blank">NVD - CVE-2026-31431</a>
-      </p>
-
-      <a href="../index.html" class="back">&larr; Back</a>
-
-    </div>
+    <ul class="post-list">
+      <li>
+        <p class="post-meta">3 May 2026</p>
+        <h2><a href="posts/cve-2026-31431.html">CVE-2026-31431 "Copy Fail"" Linux Kernel Local Privilege Escalation</a></h2>
+        <p class="post-excerpt">A nine-year-old bug in Linux allows any user to become root. A public exploit already in the wild. Here's what it is and how to fix it.</p>
+      </li>
+    </ul>
   </div>
 </main>
-
 <footer>
   <div class="wrap">
     <span>&copy; 2026 noisyloop</span>
     <span><a href="https://github.com/noisyloop" target="_blank">GitHub</a></span>
   </div>
 </footer>
-
 </body>
 </html>
