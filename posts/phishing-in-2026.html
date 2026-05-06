@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Email That Passed Every Security Check | noisyloop</title>
+  <meta name="description" content="A fully authenticated email with a verified checkmark was also a social engineering attack. Header analysis caught nothing. Here's why that's the real problem.">
+  <meta name="author" content="Noisy Loop">
+  <link rel="canonical" href="https://noisyloop.github.io/posts/platform-native-phishing.html">
+  <meta property="og:title" content="The Email That Passed Every Security Check">
+  <meta property="og:description" content="SPF pass. DKIM pass. DMARC pass. Verified checkmark. Still a social engineering attack. Here's the breakdown.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    .post-body pre {
+      background: #111;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1rem 1.1rem;
+      overflow-x: auto;
+      margin: 1.2rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      color: #ccc;
+    }
+    .post-body pre code {
+      background: none;
+      padding: 0;
+      font-size: inherit;
+      color: inherit;
+      border-radius: 0;
+    }
+    .post-body code { color: var(--link); }
+    .post-body pre .cm { color: #555; }
+
+    .callout {
+      border-left: 2px solid var(--link);
+      padding: 0.75rem 1rem;
+      background: #0a0a0a;
+      margin: 1.5rem 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .callout strong { color: var(--text); font-weight: 600; }
+    .callout.warn { border-color: #04b407; }
+    .callout.warn strong { color: #46ba02; }
+    .callout.red { border-color: #dc2626; }
+    .callout.red strong { color: #ef4444; }
+
+    .verdict-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin: 1.5rem 0;
+    }
+    .verdict {
+      background: #0d0d0d;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.75rem 1rem;
+      flex: 1;
+      min-width: 140px;
+    }
+    .verdict-val {
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .verdict-lbl {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .pass { color: #22c55e; }
+    .fail { color: #dc2626; }
+    .warn-col { color: #f59e0b; }
+
+    .attack-chain {
+      margin: 1.5rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .ac {
+      display: flex;
+      gap: 1rem;
+      padding-bottom: 1.1rem;
+      font-size: 0.9rem;
+      align-items: flex-start;
+    }
+    .ac-num {
+      color: var(--link);
+      min-width: 28px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding-top: 0.05rem;
+      flex-shrink: 0;
+      font-family: "SFMono-Regular", Consolas, monospace;
+    }
+    .ac-body { color: var(--text); line-height: 1.5; }
+    .ac-body span { color: var(--muted); font-size: 0.85rem; display: block; margin-top: 0.15rem; }
+
+    .post-body table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin: 1.2rem 0;
+    }
+    .post-body th {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .post-body td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .post-body td:first-child { color: var(--text); }
+
+    @media (max-width: 600px) {
+      .verdict-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="site-name"><a href="../index.html" style="color:var(--link);text-decoration:none;">noisyloop</a></span>
+    <nav>
+      <a href="../about.html">About</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <div class="post-header">
+      <p class="post-meta">May 2026 &nbsp;·&nbsp; Social Engineering / Email Security</p>
+      <h1>The Email That Passed Every Security Check</h1>
+    </div>
+
+    <div class="post-body">
+
+      <p>
+        A security-aware person received an email. It had a verified sender checkmark.
+        SPF passed. DKIM passed. DMARC passed with the strictest possible policy.
+        The sending infrastructure was legitimate. No header analyzer on the market
+        would have flagged it.
+      </p>
+      <p>
+        It was also a social engineering attack.
+      </p>
+      <p>
+        This write-up breaks down how it worked, why every technical trust signal
+        was meaningless in this context, and what the limits of header-based
+        analysis actually are. I built a header analyzer. This is the case that
+        broke it — on purpose.
+      </p>
+
+      <h2>The authentication picture</h2>
+      <p>
+        Running the headers through analysis produced a clean bill of health across
+        every standard check:
+      </p>
+
+      <div class="verdict-row">
+        <div class="verdict"><div class="verdict-val pass">PASS</div><div class="verdict-lbl">SPF</div></div>
+        <div class="verdict"><div class="verdict-val pass">PASS</div><div class="verdict-lbl">DKIM</div></div>
+        <div class="verdict"><div class="verdict-val pass">PASS</div><div class="verdict-lbl">DMARC p=REJECT</div></div>
+        <div class="verdict"><div class="verdict-val pass">PASS</div><div class="verdict-lbl">BIMI Checkmark</div></div>
+        <div class="verdict"><div class="verdict-val pass">PASS</div><div class="verdict-lbl">TLS 1.3</div></div>
+        <div class="verdict"><div class="verdict-val warn-col">—</div><div class="verdict-lbl">Threat Score</div></div>
+      </div>
+
+      <p>
+        The email originated from a real IP range belonging to a major platform.
+        It was signed by a legitimate sending domain. The DMARC policy was
+        <code>p=REJECT</code> — the strictest setting, meaning the domain owner
+        actively rejects spoofed mail. BIMI was configured, which is why
+        the verified checkmark appeared in the client UI.
+      </p>
+      <p>
+        The analyzer scored it near zero risk. It was correct by every metric
+        it was designed to measure.
+      </p>
+
+      <h2>What the email actually was</h2>
+      <p>
+        The platform in question operates a business tools ecosystem that allows
+        companies to send partnership and access requests to other users through
+        an official notification system. Those notifications arrive as
+        fully authenticated emails — because they are sent by the platform's
+        own mail infrastructure.
+      </p>
+      <p>
+        An attacker created a legitimate account on this platform. They then
+        sent a partner access request to the target's email address through
+        the platform's own tooling. The platform dutifully delivered an
+        authenticated notification email on their behalf.
+      </p>
+      <p>
+        The attacker did not spoof anything. They used the system as designed.
+        The checkmark was real. The threat was real. These two things are not
+        mutually exclusive.
+      </p>
+
+      <h2>The attack chain</h2>
+
+      <div class="attack-chain">
+        <div class="ac">
+          <div class="ac-num">01</div>
+          <div class="ac-body">
+            Attacker acquires target email address
+            <span>Scraped, purchased, or harvested from a dormant account associated with the target. No breach required.</span>
+          </div>
+        </div>
+        <div class="ac">
+          <div class="ac-num">02</div>
+          <div class="ac-body">
+            Attacker creates a legitimate platform account
+            <span>No special access. Free registration. Sets up a business entity with a plausible name.</span>
+          </div>
+        </div>
+        <div class="ac">
+          <div class="ac-num">03</div>
+          <div class="ac-body">
+            Attacker sends a partner access request to the target
+            <span>The platform's own notification system sends the email. Fully authenticated. Checkmark included.</span>
+          </div>
+        </div>
+        <div class="ac">
+          <div class="ac-num">04</div>
+          <div class="ac-body">
+            Target receives a verified email they cannot block at the transport layer
+            <span>SPF/DKIM/DMARC all pass. No header analyzer catches this. The threat is entirely at the application layer.</span>
+          </div>
+        </div>
+        <div class="ac">
+          <div class="ac-num">05</div>
+          <div class="ac-body">
+            Target clicks through and approves the partner request
+            <span>Attacker gains access to business assets — pages, ad accounts, payment methods, audience data.</span>
+          </div>
+        </div>
+        <div class="ac">
+          <div class="ac-num">06</div>
+          <div class="ac-body">
+            Attacker runs fraudulent ad campaigns or sells the aged account
+            <span>Aged accounts with clean history command significant value. Attached payment methods are exploited immediately.</span>
+          </div>
+        </div>
+      </div>
+
+      <h2>The hidden text trick</h2>
+      <p>
+        The email body contained a block of text rendered in a 1-pixel white
+        font on a white background. Invisible to the human reader. Fully
+        readable by spam filters.
+      </p>
+      <p>
+        The hidden text contained a disclaimer — essentially stating that
+        the named program was official, but any other similar program was not,
+        and that users should only approve requests from trusted parties.
+      </p>
+      <p>
+        This serves two functions simultaneously. It seeds spam filter
+        keyword analysis with legitimate-looking content, improving
+        deliverability. And it provides legal plausible deniability —
+        the warning was technically present. You just couldn't see it.
+      </p>
+
+      <div class="callout red">
+        <strong>This is not an accident.</strong> Crafting invisible disclaimer
+        text requires deliberate knowledge of how email clients render HTML
+        and how spam filters parse it. This is not casual spam. This is
+        engineered deliverability.
+      </div>
+
+      <h2>Why the checkmark made it worse</h2>
+      <p>
+        BIMI — Brand Indicators for Message Identification — was designed
+        to let domain owners display a verified logo next to authenticated
+        emails. The intent is to help users identify legitimate senders.
+      </p>
+      <p>
+        In this case it performed the opposite function. The checkmark
+        suppressed the instinct to scrutinise. A suspicious-looking email
+        triggers caution. A verified, professional-looking email from a
+        platform the target nominally has history with triggers compliance.
+      </p>
+      <p>
+        The checkmark did not indicate the email was safe. It indicated
+        the email genuinely came from the platform's servers. These are
+        not the same thing. The attack lived inside the platform,
+        not in the delivery mechanism.
+      </p>
+
+      <h2>What header analysis can and cannot do</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Check</th>
+            <th>What it tells you</th>
+            <th>What it doesn't tell you</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>SPF</td>
+            <td>Sending server is authorised by the domain</td>
+            <td>Whether that domain is being abused</td>
+          </tr>
+          <tr>
+            <td>DKIM</td>
+            <td>Email wasn't modified in transit</td>
+            <td>Whether the content is malicious</td>
+          </tr>
+          <tr>
+            <td>DMARC</td>
+            <td>Domain owner enforces auth policy</td>
+            <td>Whether the sender is trustworthy</td>
+          </tr>
+          <tr>
+            <td>BIMI</td>
+            <td>Logo is registered to the sending domain</td>
+            <td>Whether the email's intent is legitimate</td>
+          </tr>
+          <tr>
+            <td>Spam score</td>
+            <td>Heuristic risk based on content patterns</td>
+            <td>Platform-native social engineering</td>
+          </tr>
+          <tr>
+            <td>IP reputation</td>
+            <td>Known bad actor infrastructure</td>
+            <td>Legitimate infrastructure used maliciously</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        Header analysis is a transport-layer discipline. It answers the question:
+        <em>did this email arrive from where it claims?</em> It cannot answer:
+        <em>is the thing this email is asking you to do legitimate?</em>
+        Those are different questions. This attack only required the first
+        answer to be yes.
+      </p>
+
+      <h2>The targeting failure worth noting</h2>
+      <p>
+        The target in this incident had no active account on the platform.
+        The dormant asset the attacker was attempting to access via a third
+        party was not associated with the target's email address. The attacker
+        bulk-blasted harvested emails without verifying account relationships.
+      </p>
+      <p>
+        This is operationally sloppy. It also means the campaign is running
+        at scale. Sloppy targeting is a volume play — send enough requests,
+        some percentage of recipients will have the relevant access and
+        will click approve without reading carefully.
+      </p>
+      <p>
+        The checkmark does the conversion work. The attacker doesn't need
+        precision. They need throughput.
+      </p>
+
+      <h2>Indicators to watch for</h2>
+      <p>
+        Since headers won't save you here, the signals to look for are
+        at the application and content layer:
+      </p>
+
+      <ul>
+        <li>Notification emails for platforms you don't actively use</li>
+        <li>Partner or access requests you didn't initiate</li>
+        <li>Any email asking you to approve sharing of assets or permissions</li>
+        <li>Requests from entities with generic or program-sounding names</li>
+        <li>"Third party" or "not affiliated" disclaimers anywhere in the email — especially if hard to find</li>
+        <li>A verified checkmark on an email you weren't expecting</li>
+      </ul>
+
+      <div class="callout warn">
+        <strong>The verified checkmark is now a social engineering signal,
+        not just a trust signal.</strong> Treat unexpected verified emails
+        with more scrutiny than you'd give plain text from an unknown sender,
+        not less. The effort required to produce one has become the attacker's
+        credential.
+      </div>
+
+      <h2>If you receive one of these</h2>
+      <p>
+        Do not click through to review the request via the email link.
+        Navigate to the platform directly and check pending requests
+        from there. Reject anything you didn't initiate. Report the
+        requesting account to the platform's trust and safety team —
+        the requesting account ID will be visible in the platform's
+        partner settings UI, not in the email itself.
+      </p>
+      <p>
+        If you have dormant accounts on major platforms with assets
+        attached — pages, ad accounts, payment methods — log in and
+        audit your partner and app permissions. Dormant assets are
+        high-value targets precisely because their owners aren't watching.
+      </p>
+
+      <h2>Where this leaves header analysis</h2>
+      <p>
+        Header analysis is still worth doing. It catches spoofing,
+        misconfigured senders, and a wide class of commodity phishing
+        that represents the majority of malicious email volume.
+        The tool I built catches all of that correctly.
+      </p>
+      <p>
+        What it doesn't catch — what nothing at the header layer catches —
+        is an attacker who has correctly understood that the trust
+        infrastructure of email can be fully satisfied while the attack
+        itself runs one layer up. Platform-native social engineering
+        is immune to transport-layer analysis by design.
+      </p>
+      <p>
+        That's not a failure of the tooling. It's the correct scope of
+        what the tooling can claim. Knowing where a tool's guarantees end
+        is as important as knowing what it catches.
+      </p>
+      <p>
+        The email passed every check. That was the attack.
+      </p>
+
+      <a href="../index.html" class="back">&larr; Back</a>
+
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; 2026 noisyloop</span>
+    <span><a href="https://github.com/noisyloop" target="_blank">GitHub</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
