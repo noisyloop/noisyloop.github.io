@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IR Without a SIEM: Responding to a Supply Chain Event in Under an Hour | noisyloop</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #000;
+      color: #d4d4d4;
+      font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+      font-size: 14px;
+      line-height: 1.75;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 60px 24px 120px;
+    }
+
+    header {
+      margin-bottom: 56px;
+      border-bottom: 1px solid #1a1a1a;
+      padding-bottom: 24px;
+    }
+
+    header a {
+      color: #2dd4bf;
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    header a:hover { text-decoration: underline; }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #f0f0f0;
+      line-height: 1.4;
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: #555;
+      letter-spacing: 0.05em;
+    }
+
+    h2 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #2dd4bf;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin: 44px 0 16px;
+    }
+
+    p {
+      margin-bottom: 18px;
+      color: #c0c0c0;
+    }
+
+    a {
+      color: #2dd4bf;
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+
+    code {
+      font-family: inherit;
+      background: #0d0d0d;
+      color: #7dd3c8;
+      padding: 1px 5px;
+      border: 1px solid #1c1c1c;
+      font-size: 13px;
+    }
+
+    pre {
+      background: #080808;
+      border: 1px solid #1a1a1a;
+      border-left: 2px solid #2dd4bf;
+      padding: 16px 20px;
+      margin: 20px 0 28px;
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: #9ecfcc;
+      font-size: 13px;
+    }
+
+    .comment { color: #3d5a58; }
+
+    ul {
+      margin: 0 0 20px 0;
+      padding-left: 20px;
+      color: #c0c0c0;
+    }
+
+    ul li { margin-bottom: 6px; }
+
+    .callout {
+      border: 1px solid #1a2e2c;
+      background: #050f0e;
+      padding: 14px 18px;
+      margin: 24px 0;
+      color: #9ecfcc;
+      font-size: 13px;
+    }
+
+    .callout strong {
+      color: #2dd4bf;
+      display: block;
+      margin-bottom: 4px;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    footer {
+      margin-top: 80px;
+      padding-top: 24px;
+      border-top: 1px solid #111;
+      font-size: 12px;
+      color: #333;
+    }
+
+    footer a { color: #2dd4bf; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/">← noisyloop</a>
+</header>
+
+<h1>IR Without a SIEM: Responding to a Supply Chain Event in Under an Hour</h1>
+<p class="meta">2026-03-24 &nbsp;·&nbsp; incident response &nbsp;·&nbsp; supply chain &nbsp;·&nbsp; detection</p>
+
+<h2>Background</h2>
+
+<p>
+  In March 2026, a widely-used Python AI library was compromised at the package registry level.
+  Malicious versions were live on PyPI for roughly 40 minutes before quarantine. The payload
+  targeted environment variables, cloud credentials, SSH keys, git configs, and anything else
+  a developer machine tends to accumulate. It also went after <code>/tmp</code>.
+</p>
+
+<p>
+  I wasn't running the affected versions in production. But I had the package in my orbit —
+  demos, experimental repos, local tooling. When the disclosure started spreading, I had a
+  decision to make: assume I was clean, or treat it as an active incident and work the problem.
+  I chose the latter.
+</p>
+
+<p>
+  What followed was about 45 minutes of focused triage. No SIEM. No EDR. No IR retainer.
+  Just standard tooling, a methodology, and the discipline to not skip steps just because
+  I was probably fine.
+</p>
+
+<h2>The Attack Surface I Was Defending</h2>
+
+<p>
+  My exposure was modest but real: a few Vercel-hosted demos pulling in Python dependencies,
+  GitHub repos with varying levels of dependency pinning, and a dev machine with
+  environment variables that absolutely did not need to leave my home network.
+  AI tooling tends to accumulate credentials fast — LLM provider keys, cloud tokens,
+  API secrets tucked into <code>.env</code> files. That's the target profile the payload was written for.
+</p>
+
+<h2>Triage Methodology</h2>
+
+<p>First question: am I in the exposure window? The compromised versions were specific — I needed to confirm what was actually installed, not guess.</p>
+
+<pre><code><span class="comment"># Check installed version across environments</span>
+pip show litellm
+
+<span class="comment"># Also check uv caches — easy to miss</span>
+find ~/.cache/uv -name "litellm_init.pth" 2&gt;/dev/null</code></pre>
+
+<p>
+  The payload in the more aggressive version (<code>1.82.8</code>) dropped a <code>.pth</code> file into
+  <code>site-packages/</code>. Python processes <code>.pth</code> files automatically on every interpreter
+  startup — no import required. If that file was present, the machine was compromised
+  whether or not you ever called <code>import litellm</code>.
+</p>
+
+<pre><code><span class="comment"># Primary IOC: the malicious .pth file</span>
+find / -name "litellm_init.pth" 2&gt;/dev/null
+
+<span class="comment"># Persistence mechanism: sysmon dropper</span>
+ls -la ~/.config/sysmon/sysmon.py 2&gt;/dev/null
+ls -la ~/.config/systemd/user/sysmon.service 2&gt;/dev/null
+
+<span class="comment"># The crypto/exfil component — what I was specifically hunting for</span>
+find / -name "sysmon.py" 2&gt;/dev/null</code></pre>
+
+<p>
+  The earlier version (<code>1.82.7</code>) injected directly into <code>proxy_server.py</code> — a different
+  vector, same intent. I checked that too.
+</p>
+
+<pre><code><span class="comment"># Git history inspection — did anything touch the proxy server file?</span>
+git log --all --oneline -- '*proxy_server.py'
+
+<span class="comment"># Look for unexpected file modifications in the install</span>
+pip show -f litellm | grep -E "\.pth$|proxy_server"</code></pre>
+
+<h2>The /tmp Angle</h2>
+
+<p>
+  The payload staged exfiltration data in <code>/tmp</code> before sending it out. On Linux with AppArmor
+  properly configured, that path is a lot less useful to an attacker than they'd like.
+  I'd set up AppArmor profiles on this machine specifically because transient write targets
+  like <code>/tmp</code> are a classic staging ground — not because I'd anticipated this specific attack,
+  but because defense-in-depth means your controls don't need to know the threat in advance.
+</p>
+
+<pre><code><span class="comment"># Quick check for any remnants in /tmp</span>
+ls -la /tmp/
+find /tmp -name "*.py" -o -name "*.sh" -o -name "*.b64" 2&gt;/dev/null</code></pre>
+
+<div class="callout">
+  <strong>Note</strong>
+  AppArmor blocking unexpected writes to <code>/tmp</code> from a Python subprocess is a real control,
+  not a theoretical one. If you're on Linux and you haven't profiled your high-risk processes,
+  this incident is a reasonable motivation to start.
+</div>
+
+<h2>Secret Rotation</h2>
+
+<p>
+  I wasn't in the installation window. My checks came back clean. I rotated anyway.
+</p>
+
+<p>
+  The reasoning: credential rotation costs me 20 minutes. Leaving potentially-compromised
+  secrets in place costs me indefinitely. When the blast radius includes LLM provider keys,
+  cloud tokens, and SSH credentials, there is no risk calculus where "probably fine" beats
+  "definitely rotated."
+</p>
+
+<ul>
+  <li>All LLM API keys (any provider with an active key on this machine)</li>
+  <li>Cloud provider credentials — AWS, anything else in <code>~/.aws/</code> or environment</li>
+  <li>Any tokens with write access to GitHub repos</li>
+  <li>SSH keys associated with active infrastructure</li>
+</ul>
+
+<h2>Host Wipedown</h2>
+
+<p>
+  The machine got a full wipedown. Not because I found evidence of compromise, but because
+  I'd rather rebuild a dev environment than spend the next six months wondering.
+  This is a legitimate IR decision, not paranoia — the cost of a clean rebuild on a personal
+  dev machine is low; the cost of operating on an uncertain host is high and ongoing.
+</p>
+
+<p>
+  Wipedown checklist, in rough order:
+</p>
+
+<ul>
+  <li>Remove affected package versions across all environments and caches</li>
+  <li>Purge pip and uv caches: <code>pip cache purge</code>, <code>rm -rf ~/.cache/uv</code></li>
+  <li>Audit and rotate secrets stored in <code>.env</code> files, shell history, and credential stores</li>
+  <li>Review <code>~/.gitconfig</code>, <code>~/.ssh/</code>, <code>~/.aws/</code> for unexpected changes</li>
+  <li>Check shell history for unexpected network calls or subprocess invocations</li>
+  <li>Verify GitHub repos for unexpected commits, workflow changes, or Dependabot impersonation</li>
+</ul>
+
+<h2>What the Broader Incident Shows</h2>
+
+<p>
+  This wasn't an exotic attack. It was a credential stealer distributed through a trusted
+  package registry, targeting a dependency class (AI tooling) that has grown faster than
+  most teams' security hygiene around it. The payload specifically went after the secrets
+  profile of an AI developer: LLM keys, cloud tokens, SSH access to repos that might contain
+  more secrets. That's not coincidence.
+</p>
+
+<p>
+  The supply chain is the perimeter now. Not in a metaphorical sense — in the sense that
+  running <code>pip install</code> on a trusted package is a lateral movement opportunity if someone
+  upstream has a bad day. Every dependency is an implicit trust decision. Most of us
+  are making those decisions implicitly, at scale, continuously.
+</p>
+
+<p>
+  The memefication of these events on social media is real, and understandable — but when
+  someone actually gets hit, it stops being a meme fast. Credential theft from a dev machine
+  means your cloud infrastructure is the next incident. Your customers' data is the incident
+  after that.
+</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li><strong>Pin your dependencies.</strong> A lockfile (<code>poetry.lock</code>, <code>uv.lock</code>) would have
+      been immune to this attack — it pins to a known-safe version regardless of what's
+      live on PyPI.</li>
+  <li><strong>You don't need a SIEM to respond.</strong> You need a methodology, IOCs, and the
+      discipline to actually run the checks even when you think you're probably fine.</li>
+  <li><strong>AppArmor and similar controls earn their keep precisely in unplanned scenarios.</strong>
+      Defense-in-depth isn't about predicting the attack — it's about ensuring your controls
+      don't need to.</li>
+  <li><strong>Rotate on uncertainty.</strong> The asymmetry of cost almost always favors rotation.</li>
+  <li><strong>Awareness is a control.</strong> Knowing what packages your tooling pulls in, following
+      security advisories for the ecosystems you work in, and having a mental model of your
+      own attack surface — that's not optional hygiene anymore.</li>
+</ul>
+
+<p>
+  The tools I used here are available to anyone with a terminal. What matters is knowing
+  what to look for and having the situational awareness to look when it counts.
+</p>
+
+<footer>
+  <a href="/">noisyloop</a> &nbsp;·&nbsp; <a href="/feed.xml">feed</a>
+</footer>
+
+</body>
+</html>
