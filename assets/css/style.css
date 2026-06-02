@@ -134,3 +134,79 @@ footer a:hover { color: var(--link); text-decoration: none; }
   .post-header h1 { font-size: 1.3rem; }
   footer .wrap { flex-direction: column; gap: 0.5rem; text-align: center; }
 }
+
+/* ── Post: code blocks ── */
+.post-body pre {
+  background: #111;
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--link);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 1.2rem 0 1.6rem;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  color: #ccc;
+}
+.post-body pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+  border-radius: 0;
+}
+.post-body code { color: var(--link); }
+.post-body pre .comment { color: #3d5a58; }
+
+/* ── Post: callout / note / warning boxes ── */
+.callout {
+  border: 1px solid #1a2e2c;
+  background: #050f0e;
+  padding: 14px 18px;
+  margin: 24px 0;
+  color: #9ecfcc;
+  font-size: 0.88rem;
+}
+.callout strong {
+  color: var(--link);
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.callout.warn { border-color: #1e3a0a; }
+.callout.warn strong { color: #46ba02; }
+.note {
+  border-left: 2px solid #1e3a2f;
+  padding: 10px 14px;
+  margin: 20px 0;
+  color: #888;
+  font-size: 0.85rem;
+  background: #080808;
+}
+.warning {
+  border-left: 2px solid #5c3a00;
+  padding: 10px 14px;
+  margin: 20px 0;
+  color: #888;
+  font-size: 0.85rem;
+  background: #080808;
+}
+
+/* ── Post: horizontal rule ── */
+.post-body hr, hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 40px 0;
+}
+
+/* ── Post: meta line ── */
+.post-date {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+  letter-spacing: 0.04em;
+}
