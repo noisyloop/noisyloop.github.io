@@ -4,154 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Threat Intel for $0: Building a Passive Dashboard That Actually Blocks | noisyloop</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: #000;
-      color: #d4d4d4;
-      font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
-      font-size: 14px;
-      line-height: 1.75;
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 60px 24px 120px;
-    }
-
-    header {
-      margin-bottom: 56px;
-      border-bottom: 1px solid #1a1a1a;
-      padding-bottom: 24px;
-    }
-
-    header a {
-      color: #2dd4bf;
-      text-decoration: none;
-      font-size: 13px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    header a:hover { text-decoration: underline; }
-
-    .post-meta {
-      font-size: 12px;
-      color: #555;
-      margin-bottom: 12px;
-      letter-spacing: 0.04em;
-    }
-
-    h1 {
-      font-size: 20px;
-      font-weight: 600;
-      color: #f0f0f0;
-      line-height: 1.4;
-      margin-bottom: 32px;
-    }
-
-    h2 {
-      font-size: 14px;
-      font-weight: 600;
-      color: #2dd4bf;
-      margin: 40px 0 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    h3 {
-      font-size: 14px;
-      font-weight: 600;
-      color: #a0a0a0;
-      margin: 28px 0 8px;
-    }
-
-    p { margin-bottom: 16px; }
-
-    a { color: #2dd4bf; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    code {
-      background: #0f0f0f;
-      border: 1px solid #1e1e1e;
-      border-radius: 3px;
-      padding: 1px 6px;
-      font-size: 13px;
-      color: #c0c0c0;
-    }
-
-    pre {
-      background: #0a0a0a;
-      border: 1px solid #1a1a1a;
-      border-radius: 4px;
-      padding: 16px 18px;
-      overflow-x: auto;
-      margin: 16px 0 24px;
-      font-size: 13px;
-      line-height: 1.6;
-      color: #b0b0b0;
-    }
-
-    pre code {
-      background: none;
-      border: none;
-      padding: 0;
-      font-size: inherit;
-      color: inherit;
-    }
-
-    ul, ol {
-      margin: 0 0 16px 0;
-      padding-left: 20px;
-    }
-
-    li { margin-bottom: 6px; }
-
-    .note {
-      border-left: 2px solid #1e3a2f;
-      padding: 10px 14px;
-      margin: 20px 0;
-      color: #888;
-      font-size: 13px;
-      background: #080808;
-    }
-
-    .warning {
-      border-left: 2px solid #5c3a00;
-      padding: 10px 14px;
-      margin: 20px 0;
-      color: #888;
-      font-size: 13px;
-      background: #080808;
-    }
-
-    hr {
-      border: none;
-      border-top: 1px solid #1a1a1a;
-      margin: 40px 0;
-    }
-
-    footer {
-      margin-top: 80px;
-      padding-top: 24px;
-      border-top: 1px solid #1a1a1a;
-      font-size: 12px;
-      color: #444;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    footer a { color: #2dd4bf; }
-  </style>
+  <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
 
 <header>
-  <a href="../index.html">&larr; noisyloop</a>
+  <div class="wrap">
+    <span class="site-name"><a href="../index.html" style="color:var(--link);text-decoration:none;">noisyloop</a></span>
+    <nav>
+      <a href="../about.html">About</a>
+      <a href="https://buymeacoffee.com/noisyloops" target="_blank" rel="noopener">buy me a &#9749; Coffee</a>
+    </nav>
+  </div>
 </header>
 
 <main>
-  <p class="post-meta">01 Jun 2026 &mdash; detection engineering, threat intel</p>
-  <h1>Threat Intel for $0: Building a Passive Dashboard That Actually Blocks</h1>
+  <div class="wrap">
+
+    <div class="post-header">
+      <p class="post-meta">01 Jun 2026 &mdash; detection engineering, threat intel</p>
+      <h1>Threat Intel for $0: Building a Passive Dashboard That Actually Blocks</h1>
+    </div>
+
+    <div class="post-body">
 
   <p>I got tired of tabbing between CISA's KEV catalog, abuse.ch, and a dozen bookmarks every time I wanted to know what was actively being exploited. So I built a tool to pull it all into one place. No subscription. No API key. No enterprise budget.</p>
 
@@ -279,11 +154,15 @@ curl -sf https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.txt \
 
   <p>If this saved you time or gave you something to block, you can <a href="https://buymeacoffee.com/noisyloops" target="_blank">buy me a coffee</a>. The ROI on a $5 coffee that taught you how to block active botnet C2s is pretty hard to argue with.</p>
 
+    </div>
+  </div>
 </main>
 
 <footer>
-  <span>&copy; 2026 noisyloop</span>
-  <span><a href="https://github.com/noisyloop" target="_blank">GitHub</a></span>
+  <div class="wrap">
+    <span>&copy; 2026 noisyloop</span>
+    <span><a href="https://github.com/noisyloop" target="_blank">GitHub</a></span>
+  </div>
 </footer>
 
 </body>
