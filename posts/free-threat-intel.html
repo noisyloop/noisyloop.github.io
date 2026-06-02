@@ -3,97 +3,225 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Threat Intel for $0: Building a Passive Dashboard That Actually Blocks | noisyloop</title>
-  <link rel="stylesheet" href="../assets/css/style.css">
+  <meta name="description" content="A passive threat intel dashboard built entirely on free, no-auth public feeds. CISA KEV, URLhaus, and Feodo Tracker in one place. Zero cost, zero API keys, deployable in minutes.">
+  <title>Threat Intel for $0: A Passive Dashboard on Free Public Feeds | noisyloop</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #000;
+      color: #d4d4d4;
+      font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+      font-size: 14px;
+      line-height: 1.75;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 60px 24px 120px;
+    }
+
+    header {
+      margin-bottom: 56px;
+      border-bottom: 1px solid #1a1a1a;
+      padding-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header a {
+      color: #2dd4bf;
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    header a:hover { text-decoration: underline; }
+
+    nav { display: flex; gap: 24px; }
+
+    .post-meta {
+      font-size: 12px;
+      color: #555;
+      margin-bottom: 12px;
+      letter-spacing: 0.04em;
+    }
+
+    h1 {
+      font-size: 20px;
+      color: #f0f0f0;
+      font-weight: 700;
+      line-height: 1.35;
+      margin-bottom: 40px;
+    }
+
+    h2 {
+      font-size: 15px;
+      color: #f0f0f0;
+      font-weight: 700;
+      margin: 48px 0 16px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    h3 {
+      font-size: 13px;
+      color: #2dd4bf;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    p { margin-bottom: 18px; }
+
+    a { color: #2dd4bf; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    ul, ol {
+      margin: 0 0 18px 20px;
+    }
+
+    li { margin-bottom: 8px; }
+
+    code {
+      background: #0d0d0d;
+      border: 1px solid #1e1e1e;
+      color: #2dd4bf;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+
+    pre {
+      background: #0a0a0a;
+      border: 1px solid #1e1e1e;
+      border-left: 2px solid #2dd4bf;
+      padding: 18px 20px;
+      overflow-x: auto;
+      margin: 20px 0 28px;
+      border-radius: 3px;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: #c8c8c8;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      margin: 48px 0;
+    }
+
+    .callout {
+      border: 1px solid #1e1e1e;
+      border-left: 2px solid #2dd4bf;
+      background: #080808;
+      padding: 14px 18px;
+      margin: 24px 0;
+      font-size: 13px;
+      color: #bbb;
+    }
+
+    .callout.warn {
+      border-left-color: #f59e0b;
+      color: #d4a35a;
+    }
+
+    footer {
+      margin-top: 80px;
+      padding-top: 24px;
+      border-top: 1px solid #1a1a1a;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #444;
+    }
+
+    footer a { color: #444; }
+    footer a:hover { color: #2dd4bf; }
+  </style>
 </head>
 <body>
 
 <header>
-  <div class="wrap">
-    <span class="site-name"><a href="../index.html" style="color:var(--link);text-decoration:none;">noisyloop</a></span>
-    <nav>
-      <a href="../about.html">About</a>
-      <a href="https://buymeacoffee.com/noisyloops" target="_blank" rel="noopener">buy me a &#9749; Coffee</a>
-    </nav>
-  </div>
+  <a href="../index.html">noisyloop</a>
+  <nav>
+    <a href="../about.html">About</a>
+    <a href="https://buymeacoffee.com/noisyloops" target="_blank" rel="noopener">&#9749; coffee</a>
+  </nav>
 </header>
 
 <main>
-  <div class="wrap">
 
-    <div class="post-header">
-      <p class="post-meta">01 Jun 2026 &mdash; detection engineering, threat intel</p>
-      <h1>Threat Intel for $0: Building a Passive Dashboard That Actually Blocks</h1>
-    </div>
+  <p class="post-meta">01 Jun 2026 &mdash; detection engineering, threat intel</p>
+  <h1>Threat Intel for $0: A Passive Dashboard on Free Public Feeds</h1>
 
-    <div class="post-body">
+  <p>Most sites that talk about threat intel eventually ask you for a credit card. This one doesn't. The dashboard I built runs on zero API keys, costs nothing to host, and surfaces the same underlying data that powers a lot of expensive commercial platforms &mdash; because those platforms are often just wrapping the same free public feeds.</p>
 
-  <p>I got tired of tabbing between CISA's KEV catalog, abuse.ch, and a dozen bookmarks every time I wanted to know what was actively being exploited. So I built a tool to pull it all into one place. No subscription. No API key. No enterprise budget.</p>
+  <p>The tool is live at <a href="https://passive-intel.vercel.app" target="_blank">passive-intel.vercel.app</a>. Source at <a href="https://github.com/noisyloop/passive-intel" target="_blank">github.com/noisyloop/passive-intel</a>. Fork it, deploy it, use it. Five minutes, no secrets to manage.</p>
 
-  <p>The result is live at <a href="https://passive-intel.vercel.app" target="_blank">passive-intel.vercel.app</a>. The source is at <a href="https://github.com/noisyloop/passive-intel" target="_blank">github.com/noisyloop/passive-intel</a>.</p>
-
-  <p>This post covers how it works, what it surfaces, and how to actually use that intel to block threats on your own infrastructure.</p>
+  <p>This post covers what it pulls, why free feeds are underrated, and how to turn the data into actual blocks on infrastructure you control.</p>
 
   <hr>
 
-  <h2>What It Does</h2>
+  <h2>What It Pulls</h2>
 
-  <p>Three panels, all read-only, all passive:</p>
+  <p>Three panels. All read-only. Nothing here touches a target &mdash; every data point is cached public intelligence queried server-side.</p>
 
   <ul>
-    <li><strong>CISA KEV</strong> &mdash; the Known Exploited Vulnerabilities catalog, newest first. Filterable by vendor, product, or CVE ID. Click any entry to expand the description and pull a live CVSS base score from NVD. Ransomware-linked entries are flagged.</li>
-    <li><strong>URLhaus (online feed)</strong> &mdash; live malware URLs actively serving payloads right now, not historical. Filterable by host, threat type, or tag.</li>
-    <li><strong>Feodo Tracker</strong> &mdash; active botnet command-and-control IPs with malware family and country. The same feed powering a lot of commercial threat intel platforms, available for free.</li>
+    <li><strong>CISA KEV</strong> &mdash; the Known Exploited Vulnerabilities catalog. Newest first, filterable by vendor, product, or CVE ID. Expand any entry for the description and a live CVSS base score from NVD. Ransomware-linked entries are flagged.</li>
+    <li><strong>URLhaus (online feed)</strong> &mdash; malware URLs actively serving payloads right now, not historical. Filterable by host, threat type, or tag.</li>
+    <li><strong>Feodo Tracker</strong> &mdash; active botnet C2 IPs with malware family and country. Emotet, QakBot, AsyncRAT. The same feed many commercial platforms resell.</li>
   </ul>
-
-  <p>Nothing here scans anything. No probes, no active recon. Every data point is cached public intelligence pulled server-side. The browser only ever talks to the app itself.</p>
 
   <hr>
 
-  <h2>The Free APIs Doing the Heavy Lifting</h2>
-
-  <p>Credit where it's due &mdash; none of this works without these:</p>
+  <h2>The Free Feeds Doing the Work</h2>
 
   <ul>
-    <li><a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank">CISA KEV</a> &mdash; confirmed in-the-wild exploitation, updated frequently. Free JSON feed, no auth.</li>
-    <li><a href="https://urlhaus.abuse.ch/" target="_blank">URLhaus</a> by abuse.ch &mdash; community-sourced malware URL feed, online-only subset. Free CSV, no auth.</li>
-    <li><a href="https://feodotracker.abuse.ch/" target="_blank">Feodo Tracker</a> by abuse.ch &mdash; active botnet C2 IPs covering Emotet, QakBot, AsyncRAT, and others. Free JSON, no auth.</li>
-    <li><a href="https://nvd.nist.gov/" target="_blank">NVD</a> &mdash; CVSS base scores from NIST. Free REST API, no auth required for reasonable usage.</li>
+    <li><a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank">CISA KEV</a> &mdash; confirmed in-the-wild exploitation. Free JSON, no auth, updated frequently.</li>
+    <li><a href="https://urlhaus.abuse.ch/" target="_blank">URLhaus</a> (abuse.ch) &mdash; community-sourced malware URL feed, online-only subset. Free CSV, no auth.</li>
+    <li><a href="https://feodotracker.abuse.ch/" target="_blank">Feodo Tracker</a> (abuse.ch) &mdash; active botnet C2 IPs. Free JSON, no auth.</li>
+    <li><a href="https://nvd.nist.gov/" target="_blank">NVD</a> &mdash; CVSS base scores from NIST. Free REST API, no auth at reasonable rate.</li>
   </ul>
 
-  <h3>A note on secrets</h3>
+  <p>The reason these feeds are good is that they're maintained by people who care about the data, not about upselling you. abuse.ch in particular runs URLhaus, Feodo Tracker, MalwareBazaar, and ThreatFox &mdash; all free, all community-driven, all legitimate primary sources.</p>
 
-  <p>There are no API keys in this codebase &mdash; not because I forgot them, but because I deliberately chose feeds that don't require them. This matters more than it sounds.</p>
+  <h3>On the no-API-key design</h3>
 
-  <p>A common mistake when replicating this pattern is reaching for a paid or credentialed API and then hardcoding the key client-side or committing it to a public repo. Don't. If you extend this with a feed that requires authentication, that key belongs in an environment variable on the server side &mdash; never in frontend code, never in version control. The reason this stack is clean is that the feeds are free and open by design. The moment you add a credentialed API, the architecture has to account for it.</p>
+  <p>The absence of credentials here is intentional architecture, not an oversight. Every feed in this stack is open by design. The moment you add a credentialed API, the key has to live somewhere &mdash; and that somewhere is usually a server-side environment variable, not a client-side JS file and definitely not a public repo.</p>
 
-  <div class="warning">
-    Private API keys hardcoded in client-side JavaScript or committed to a public repo are not a configuration choice &mdash; they're a credential exposure. Free feeds sidestep this entirely. If you're adding paid APIs, keep secrets server-side.
+  <div class="callout warn">
+    Hardcoding API keys client-side or committing them to a public repo is credential exposure, not configuration. If you extend this with a paid feed, keep secrets server-side.
   </div>
 
+  <p>The zero-cost, zero-secret constraint forces cleaner architecture. It also means anyone can fork this and run it without asking their org for budget approval or managing secrets rotation.</p>
+
   <hr>
 
-  <h2>The Security Posture</h2>
+  <h2>The Security Posture of the App Itself</h2>
 
-  <p>The feeds contain attacker-influenced data &mdash; live malware URLs, C2 IPs, threat actor tags. The client code is deliberately paranoid about how it renders them.</p>
+  <p>The feeds contain attacker-influenced data. Live malware URLs. Active C2 IPs. Threat actor tags. The client is paranoid about rendering any of it.</p>
 
-  <p>Every dynamic value is written via <code>textContent</code>, never via <code>innerHTML</code> or any markup-building path. Malware URLs are displayed as inert plain text &mdash; no <code>&lt;a href&gt;</code> anywhere. A poisoned feed entry containing a script tag renders as visible text, not code. The CSP reinforces this as a second independent layer: <code>default-src 'none'</code>, <code>script-src 'self'</code>, <code>connect-src 'self'</code>.</p>
+  <p>Every dynamic value goes through <code>textContent</code>, never <code>innerHTML</code>. Malware URLs display as inert plain text with no <code>&lt;a href&gt;</code>. A poisoned feed entry with a script tag renders as visible text, not code. The CSP is a second independent layer: <code>default-src 'none'</code>, <code>script-src 'self'</code>, <code>connect-src 'self'</code>.</p>
 
-  <p>The API functions reject scanner traffic before any handler logic runs. Missing or known-bad User-Agent strings get a 403 immediately. Rate limiting is per-IP per-endpoint. Unknown paths return a clean 404 from a dedicated handler &mdash; nothing useful leaks about routing.</p>
+  <p>The API functions reject scanner traffic before any handler logic runs. Missing or known-bad User-Agent strings get a 403. Rate limiting is per-IP per-endpoint. Unknown paths return a clean 404 from a dedicated handler &mdash; nothing useful leaks about routing.</p>
 
   <hr>
 
   <h2>Actually Blocking the Threats</h2>
 
-  <p>The intel is only useful if you do something with it. The app exposes <code>/api/blocklist.txt</code> &mdash; one Feodo C2 IP per line, pulled from the live feed and cached at the edge:</p>
-
-  <pre><code>https://passive-intel.vercel.app/api/blocklist.txt</code></pre>
-
-  <p>Point any of the scripts below at it, or hit the Feodo recommended list directly. Either works.</p>
+  <p>The dashboard also exposes <code>/api/blocklist.txt</code> &mdash; one Feodo C2 IP per line, pulled from the live feed and cached at the edge. Point a cron job at it and you're blocking confirmed active C2 infrastructure on an hourly refresh. Or pull directly from Feodo's recommended list. Either works.</p>
 
   <h3>nginx</h3>
 
-  <pre><code>#!/bin/bash
+<pre><code>#!/bin/bash
 # /etc/cron.hourly/update-feodo-blocklist
 curl -sf https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.txt \
   | grep -v '^#' \
@@ -101,29 +229,21 @@ curl -sf https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.txt \
   &gt; /etc/nginx/conf.d/feodo-blocklist.conf
 nginx -t &amp;&amp; nginx -s reload</code></pre>
 
-  <p>Include it in your <code>http</code> or <code>server</code> block:</p>
-
-  <pre><code>include /etc/nginx/conf.d/feodo-blocklist.conf;</code></pre>
-
-  <p>Run hourly. The list rotates &mdash; stale blocks are harmless, missing new ones is not.</p>
+  <p>Include it in your <code>http</code> or <code>server</code> block with <code>include /etc/nginx/conf.d/feodo-blocklist.conf;</code>. Run hourly. The list rotates &mdash; stale blocks are harmless, missing new entries is not.</p>
 
   <h3>ufw</h3>
 
-  <pre><code>#!/bin/bash
+<pre><code>#!/bin/bash
 curl -sf https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.txt \
   | grep -v '^#' \
   | while read ip; do
       ufw deny from "$ip" to any
     done</code></pre>
 
-  <p>Same cron cadence. Works on any Linux host you control directly.</p>
-
   <h3>Cloudflare (free tier)</h3>
 
-  <p>CF's free tier supports IP Access Rules via API. Set your credentials as environment variables &mdash; not hardcoded in the script:</p>
-
-  <pre><code>#!/bin/bash
-# CF_ZONE and CF_TOKEN set as env vars, not hardcoded
+<pre><code>#!/bin/bash
+# CF_ZONE and CF_TOKEN set as env vars
 curl -sf https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.txt \
   | grep -v '^#' \
   | while read ip; do
@@ -138,31 +258,23 @@ curl -sf https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.txt \
 
   <hr>
 
-  <h2>What This Isn't</h2>
+  <h2>Why This Exists</h2>
 
-  <p>This isn't a replacement for a SIEM, an EDR, or a full threat intel platform. It doesn't automatically push rules to your firewall &mdash; though <code>/api/blocklist.txt</code> gives you a stable feed URL a cron job can act on, which is close enough for most self-hosted setups.</p>
+  <p>I built this because I was tired of tabbing between CISA, abuse.ch, and a dozen bookmarks every time I wanted a quick check on what was actively being exploited. The intel was always there &mdash; I just needed it in one place without noise.</p>
 
-  <p>What it is: a fast, free, passive view of what's actively being exploited and what infrastructure is confirmed malicious right now. Good for a morning check, a quick lookup mid-incident, or as a feed source for the blocking scripts above.</p>
+  <p>It's also partially a rebuttal. People assume good threat intel costs money. It doesn't. The expensive platforms are useful for correlation and scale &mdash; but the underlying feeds are public. The person standing up their first VPS doesn't need a $50k subscription. They need to know these feeds exist and that there's a one-liner to act on them.</p>
 
-  <p>The person standing up their first server doesn't need a $50k threat intel subscription. They need to know these feeds exist and that there's a one-liner to act on them.</p>
-
-  <div class="note">
-    Total monthly cost: $0. Sources: CISA, abuse.ch, NVD. No database. No auth. No environment variables required.
+  <div class="callout">
+    Total monthly cost: $0. Sources: CISA, abuse.ch, NVD. No database. No API keys. No environment variables required to deploy.
   </div>
 
-  <hr>
+  <p>If this saved you time or gave you something to block, <a href="https://buymeacoffee.com/noisyloops" target="_blank">coffee</a> is appreciated. The ROI on a $5 coffee that taught you how to block active botnet C2s is hard to argue with.</p>
 
-  <p>If this saved you time or gave you something to block, you can <a href="https://buymeacoffee.com/noisyloops" target="_blank">buy me a coffee</a>. The ROI on a $5 coffee that taught you how to block active botnet C2s is pretty hard to argue with.</p>
-
-    </div>
-  </div>
 </main>
 
 <footer>
-  <div class="wrap">
-    <span>&copy; 2026 noisyloop</span>
-    <span><a href="https://github.com/noisyloop" target="_blank">GitHub</a></span>
-  </div>
+  <span>&copy; 2026 noisyloop</span>
+  <span><a href="https://github.com/noisyloop" target="_blank">GitHub</a></span>
 </footer>
 
 </body>
